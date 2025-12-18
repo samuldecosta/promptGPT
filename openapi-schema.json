@@ -1,0 +1,321 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Vistaprint Content API",
+    "description": "API wrapper for Vistaprint Gallery Content with normalized responses and shortened preview URLs",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://promptgpt-yamv.onrender.com",
+      "description": "Production server"
+    },
+    {
+      "url": "http://localhost:3000",
+      "description": "Local development server"
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Health Check",
+        "description": "Check if the API is running and healthy",
+        "operationId": "healthCheck",
+        "responses": {
+          "200": {
+            "description": "API is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "OK"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time",
+                      "example": "2025-12-18T10:30:00.000Z"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/content": {
+      "get": {
+        "summary": "Get Gallery Content",
+        "description": "Fetches and normalizes content from Vistaprint Gallery API. Returns design information with shortened preview URLs.",
+        "operationId": "getContent",
+        "parameters": [
+          {
+            "name": "productID",
+            "in": "query",
+            "required": true,
+            "description": "The product ID to fetch content for",
+            "schema": {
+              "type": "string",
+              "example": "123"
+            }
+          },
+          {
+            "name": "requestor",
+            "in": "query",
+            "required": true,
+            "description": "The requestor identifier",
+            "schema": {
+              "type": "string",
+              "example": "myapp"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Maximum number of results to return",
+            "schema": {
+              "type": "integer",
+              "default": 10,
+              "minimum": 1,
+              "example": 10
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved and normalized content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "count": {
+                      "type": "integer",
+                      "description": "Number of items returned",
+                      "example": 10
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "designId": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "Unique identifier for the design",
+                            "example": "design123"
+                          },
+                          "designConceptId": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "Design concept identifier",
+                            "example": "concept456"
+                          },
+                          "designConceptName": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "Name of the design concept",
+                            "example": "Business Card Design"
+                          },
+                          "studioUrl": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "URL to edit the design in studio",
+                            "example": "https://www.vistaprint.com/studio/..."
+                          },
+                          "previewUrl": {
+                            "type": "string",
+                            "description": "Shortened URL for the preview image (redirects to original)",
+                            "example": "http://localhost:3000/api/v1/img/3f8d9a12"
+                          },
+                          "previewUrls": {
+                            "type": "object",
+                            "description": "All available preview URLs in different sizes",
+                            "properties": {
+                              "size1x": {
+                                "type": "string",
+                                "example": "https://cms.cloudinary.vpsvc.com/image/upload/..."
+                              }
+                            },
+                            "additionalProperties": {
+                              "type": "string"
+                            }
+                          },
+                          "productOptions": {
+                            "type": "object",
+                            "description": "Product-specific options and attributes",
+                            "additionalProperties": true,
+                            "example": {
+                              "color": "blue",
+                              "size": "standard"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Missing or invalid parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "example": "Missing required parameter: productID"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "Vistaprint API Error: 404 - Not Found"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/img/{hash}": {
+      "get": {
+        "summary": "Image Redirect",
+        "description": "Redirects to the original image URL based on the short hash",
+        "operationId": "getImageRedirect",
+        "parameters": [
+          {
+            "name": "hash",
+            "in": "path",
+            "required": true,
+            "description": "8-character hash representing the original image URL",
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 8,
+              "example": "3f8d9a12"
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Redirects to the original image URL"
+          },
+          "404": {
+            "description": "Image hash not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "example": "Image not found"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ContentItem": {
+        "type": "object",
+        "properties": {
+          "designId": {
+            "type": "string",
+            "nullable": true
+          },
+          "designConceptId": {
+            "type": "string",
+            "nullable": true
+          },
+          "designConceptName": {
+            "type": "string",
+            "nullable": true
+          },
+          "studioUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "previewUrl": {
+            "type": "string"
+          },
+          "previewUrls": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "productOptions": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "SuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "count": {
+            "type": "integer"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ContentItem"
+            }
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "error": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}
